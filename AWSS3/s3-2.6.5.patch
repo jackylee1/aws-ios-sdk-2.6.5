@@ -1,0 +1,72 @@
+--- AWSS3TransferUtility.h	2017-10-22 14:10:49.000000000 +0300
++++ AWSS3TransferUtility-hyperlync.h	2017-10-22 14:34:59.000000000 +0300
+@@ -24,7 +24,8 @@
+     AWSS3TransferUtilityErrorRedirection,
+     AWSS3TransferUtilityErrorClientError,
+     AWSS3TransferUtilityErrorServerError,
+-    AWSS3TransferUtilityErrorLocalFileNotFound
++    AWSS3TransferUtilityErrorLocalFileNotFound,
++    AWSS3TransferUtilityErrorCircumventExceptionError //Hyperlync
+ };
+ 
+ FOUNDATION_EXPORT NSString *const AWSS3TransferUtilityURLSessionDidBecomeInvalidNotification;
+--- AWSS3TransferUtility.m	2017-10-22 14:10:49.000000000 +0300
++++ AWSS3TransferUtility-hyperlync.m	2017-10-22 14:32:01.000000000 +0300
+@@ -755,30 +755,36 @@
+ - (void)URLSession:(NSURLSession *)session
+               task:(NSURLSessionTask *)task
+ didCompleteWithError:(NSError *)error {
+-    if (!error) {
++   if (!error) {
+         if (![task.response isKindOfClass:[NSHTTPURLResponse class]]) {
+-            [NSException raise:@"Invalid NSURLSession state" format:@"Expected response of type  %@", @"NSHTTPURLResponse"];
+-        }
+-        
+-        NSHTTPURLResponse *HTTPResponse = (NSHTTPURLResponse *)task.response;
+-        NSMutableDictionary *userInfo = [NSMutableDictionary dictionaryWithDictionary:[HTTPResponse allHeaderFields]];
+-        if (HTTPResponse.statusCode / 100 == 3
+-            && HTTPResponse.statusCode != 304) { // 304 Not Modified is a valid response.
+-            error = [NSError errorWithDomain:AWSS3TransferUtilityErrorDomain
+-                                        code:AWSS3TransferUtilityErrorRedirection
+-                                    userInfo:userInfo];
+-        }
+-        
+-        if (HTTPResponse.statusCode / 100 == 4) {
++            //Hyperlync
++//          [NSException raise:@"Invalid NSURLSession state" format:@"Expected response of type  %@", @"NSHTTPURLResponse"];
++            NSLog(@"TransferUtility - Got the bad response");
+             error = [NSError errorWithDomain:AWSS3TransferUtilityErrorDomain
+-                                        code:AWSS3TransferUtilityErrorClientError
+-                                    userInfo:userInfo];
++                                        code:AWSS3TransferUtilityErrorCircumventExceptionError
++                                    userInfo:nil];
+         }
+-        
+-        if (HTTPResponse.statusCode / 100 == 5) {
+-            error = [NSError errorWithDomain:AWSS3TransferUtilityErrorDomain
+-                                        code:AWSS3TransferUtilityErrorServerError
+-                                    userInfo:userInfo];
++        else {  //Hyperlync
++            NSHTTPURLResponse *HTTPResponse = (NSHTTPURLResponse *)task.response;
++            NSMutableDictionary *userInfo = [NSMutableDictionary dictionaryWithDictionary:[HTTPResponse allHeaderFields]];
++            if (HTTPResponse.statusCode / 100 == 3
++                && HTTPResponse.statusCode != 304) { // 304 Not Modified is a valid response.
++                error = [NSError errorWithDomain:AWSS3TransferUtilityErrorDomain
++                                            code:AWSS3TransferUtilityErrorRedirection
++                                        userInfo:userInfo];
++            }
++            
++            if (HTTPResponse.statusCode / 100 == 4) {
++                error = [NSError errorWithDomain:AWSS3TransferUtilityErrorDomain
++                                            code:AWSS3TransferUtilityErrorClientError
++                                        userInfo:userInfo];
++            }
++            
++            if (HTTPResponse.statusCode / 100 == 5) {
++                error = [NSError errorWithDomain:AWSS3TransferUtilityErrorDomain
++                                            code:AWSS3TransferUtilityErrorServerError
++                                        userInfo:userInfo];
++            }
+         }
+     }
+     
